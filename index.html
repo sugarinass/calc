@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Калькулятор себестоимости 3D печати</title>
+
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="3D Калькулятор">
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f2f5;
+    --card-bg: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #666666;
+    --text-faint: #999999;
+    --border: #e0e0e0;
+    --border-soft: #eeeeee;
+    --result-bg: #f8f9fa;
+    --input-bg: #ffffff;
+    --shadow: rgba(0,0,0,0.08);
+    --accent: #3b82f6;
+    --accent2: #2563eb;
+    --green: #059669;
+    --toggle-off: #cbd5e1;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f1115;
+    --card-bg: #1a1d24;
+    --text: #eef0f3;
+    --text-muted: #a3a9b5;
+    --text-faint: #6b7280;
+    --border: #2c2f38;
+    --border-soft: #262932;
+    --result-bg: #22252d;
+    --input-bg: #22252d;
+    --shadow: rgba(0,0,0,0.4);
+    --accent: #3b82f6;
+    --accent2: #2563eb;
+    --green: #10b981;
+    --toggle-off: #3a3f4b;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+    line-height: 1.5;
+    transition: background 0.2s, color 0.2s;
+  }
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px var(--shadow);
+    padding: 24px;
+  }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  h1 { font-size: 22px; color: var(--text); }
+  .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+  .theme-btn {
+    flex-shrink: 0;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--result-bg);
+    font-size: 17px;
+    cursor: pointer;
+  }
+
+  .field { margin-bottom: 16px; }
+  label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    background: var(--input-bg);
+    color: var(--text);
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text-faint); }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-faint);
+    margin: 24px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  .toggle-row span.toggle-label { font-size: 14px; font-weight: 600; color: var(--text); }
+
+  /* Весь переключатель — это <label>, поэтому клик в любой точке (и по кругляшу, и по тексту) переключает checkbox */
+  .switch {
+    position: relative;
+    width: 46px; height: 26px;
+    flex-shrink: 0;
+    display: inline-block;
+    cursor: pointer;
+  }
+  .switch input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+  .slider {
+    position: absolute; inset: 0;
+    background: var(--toggle-off);
+    border-radius: 999px;
+    transition: 0.2s;
+    pointer-events: none;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 20px; width: 20px;
+    left: 3px; top: 3px; background: #fff; border-radius: 50%;
+    transition: 0.2s;
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(20px); }
+
+  .result-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px; background: var(--result-bg);
+    border-radius: 10px; margin-bottom: 8px; font-size: 15px;
+  }
+  .result-row .label { color: var(--text-muted); }
+  .result-row .value { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+
+  .total {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; padding: 16px; border-radius: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 16px 0; font-size: 18px;
+  }
+  .total .label { color: rgba(255,255,255,0.85); }
+  .total .value { font-weight: 800; font-size: 22px; }
+
+  .profit .value { color: var(--green); }
+
+  .hint { font-size: 12px; color: var(--text-faint); margin-top: 4px; }
+
+  .toggle-link {
+    text-align: center; margin-top: 24px; padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .toggle-link button {
+    background: none; border: none; color: var(--accent);
+    font-size: 14px; cursor: pointer; font-weight: 600;
+  }
+  .panel { display: none; margin-top: 16px; padding: 16px; background: var(--result-bg); border-radius: 12px; }
+  .panel.open { display: block; }
+  .panel .field { margin-bottom: 12px; }
+  .panel label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+  .panel p { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.6; }
+  .panel p b { color: var(--text); }
+
+  .footer { text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 20px; }
+
+  @media (max-width: 480px) {
+    .container { padding: 18px; border-radius: 12px; }
+    h1 { font-size: 19px; }
+    .total .value { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header-row">
+    <div>
+      <h1>🧮 Калькулятор себестоимости</h1>
+      <div class="subtitle">3D-печать • Anycubic Kobra S1 + ACE Pro</div>
+    </div>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
+  </div>
+
+  <div class="field">
+    <label>Вес изделия (г)</label>
+    <input type="number" id="weight" placeholder="напр. 155" step="0.1" min="0">
+  </div>
+
+  <div class="field">
+    <label>Цена пластика (руб/кг)</label>
+    <input type="number" id="price" placeholder="напр. 1700" step="10" min="0">
+  </div>
+
+  <div class="field">
+    <label>Время печати (часы)</label>
+    <input type="number" id="time" placeholder="напр. 8" step="0.1" min="0">
+  </div>
+
+  <div class="field">
+    <label>Упаковка и доставка (руб)</label>
+    <input type="number" id="packaging" placeholder="0" step="1" min="0">
+  </div>
+
+  <div class="toggle-row">
+    <span class="toggle-label">Учёт брака (+5% к себестоимости)</span>
+    <label class="switch">
+      <input type="checkbox" id="defect">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="section-title">Себестоимость</div>
+
+  <div class="result-row"><span class="label">Пластик</span><span class="value" id="r-plastic">0,00 ₽</span></div>
+  <div class="result-row"><span class="label">Печать (амортизация + электричество)</span><span class="value" id="r-print">0,00 ₽</span></div>
+  <div class="result-row"><span class="label">Сушка (ACE Pro)</span><span class="value" id="r-dry">0,00 ₽</span></div>
+  <div class="result-row" id="row-packaging" style="display:none"><span class="label">Упаковка и доставка</span><span class="value" id="r-packaging">0,00 ₽</span></div>
+  <div class="result-row" id="row-defect" style="display:none"><span class="label">Брак (+5%)</span><span class="value" id="r-defect">0,00 ₽</span></div>
+
+  <div class="total"><span class="label">ИТОГО</span><span class="value" id="r-total">0,00 ₽</span></div>
+
+  <div class="section-title">Цена продажи</div>
+  <div class="result-row"><span class="label">Наценка 100%</span><span class="value" id="r-p100">0,00 ₽</span></div>
+  <div class="result-row"><span class="label">Наценка 150%</span><span class="value" id="r-p150">0,00 ₽</span></div>
+  <div class="result-row"><span class="label">Наценка 200%</span><span class="value" id="r-p200">0,00 ₽</span></div>
+
+  <div class="section-title">Прибыль</div>
+  <div class="result-row profit"><span class="label">При наценке 100%</span><span class="value" id="r-profit100">0,00 ₽</span></div>
+  <div class="result-row profit"><span class="label">При наценке 150%</span><span class="value" id="r-profit150">0,00 ₽</span></div>
+  <div class="result-row profit"><span class="label">При наценке 200%</span><span class="value" id="r-profit200">0,00 ₽</span></div>
+
+  <div class="toggle-link"><button onclick="togglePanel('settings')">⚙️ Настройки (тарифы)</button></div>
+  <div class="panel" id="settings">
+    <div class="field">
+      <label>Печать S1 — максимум (руб/ч)</label>
+      <input type="number" id="s-print" step="0.01">
+      <div class="hint">Амортизация + электричество. Сохраняется и используется во всех расчётах.</div>
+    </div>
+    <div class="field">
+      <label>Сушка на 100 г (руб)</label>
+      <input type="number" id="s-dry" step="0.01">
+    </div>
+    <div class="field">
+      <label>Знак валюты</label>
+      <input type="text" id="s-currency">
+    </div>
+  </div>
+
+  <div class="toggle-link"><button onclick="togglePanel('install')">📲 Установить как приложение</button></div>
+  <div class="panel" id="install">
+    <p><b>iPhone (Safari):</b> откройте сайт в Safari → кнопка «Поделиться» → «На экран «Домой»».</p>
+    <p><b>Android (Chrome):</b> меню (⋮) в углу браузера → «Добавить на главный экран» / «Установить приложение».</p>
+    <p>Страница работает офлайн после первого открытия — иконка, кэш и манифест подключены как обычный сайт на GitHub Pages.</p>
+  </div>
+
+  <div class="footer">Расчёт (вес/цена/время/брак/упаковка) сбрасывается при перезагрузке. Тарифы в настройках — сохраняются.</div>
+</div>
+
+<script>
+  // ---------- Тема ----------
+  const root = document.documentElement;
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    document.getElementById('theme-btn').textContent = t === 'dark' ? '☀️' : '🌙';
+  }
+  applyTheme(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  function toggleTheme() {
+    applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  }
+
+  // ---------- Панели ----------
+  function togglePanel(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  // ---------- Тарифы: сохраняются и одинаковы для всех расчётов ----------
+  const TARIFF_DEFAULTS = { 's-print': '67.75', 's-dry': '4.32', 's-currency': '₽' };
+  const TARIFF_IDS = Object.keys(TARIFF_DEFAULTS);
+
+  function loadTariffs() {
+    TARIFF_IDS.forEach((id) => {
+      const saved = localStorage.getItem('tariff_' + id);
+      document.getElementById(id).value = saved !== null ? saved : TARIFF_DEFAULTS[id];
+    });
+  }
+  function saveTariffs() {
+    TARIFF_IDS.forEach((id) => {
+      localStorage.setItem('tariff_' + id, document.getElementById(id).value);
+    });
+  }
+  loadTariffs();
+
+  // ---------- Расчёт ----------
+  function num(id) {
+    const v = parseFloat(document.getElementById(id).value);
+    return isNaN(v) ? 0 : v;
+  }
+  function fmt(n) {
+    const cur = document.getElementById('s-currency').value || '₽';
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + cur;
+  }
+
+  function calc() {
+    const weight = num('weight');
+    const price = num('price');
+    const time = num('time');
+    const printRate = num('s-print');
+    const dryRate = num('s-dry');
+    const packaging = num('packaging');
+    const defectOn = document.getElementById('defect').checked;
+
+    const plastic = weight / 1000 * price;
+    const print = time * printRate;
+    const dry = weight / 100 * dryRate;
+
+    const subtotal = plastic + print + dry + packaging;
+    const defectAmount = defectOn ? subtotal * 0.05 : 0;
+    const total = subtotal + defectAmount;
+
+    document.getElementById('r-plastic').textContent = fmt(plastic);
+    document.getElementById('r-print').textContent = fmt(print);
+    document.getElementById('r-dry').textContent = fmt(dry);
+
+    document.getElementById('row-packaging').style.display = packaging > 0 ? 'flex' : 'none';
+    document.getElementById('r-packaging').textContent = fmt(packaging);
+
+    document.getElementById('row-defect').style.display = defectOn ? 'flex' : 'none';
+    document.getElementById('r-defect').textContent = fmt(defectAmount);
+
+    document.getElementById('r-total').textContent = fmt(total);
+
+    document.getElementById('r-p100').textContent = fmt(total * 2);
+    document.getElementById('r-p150').textContent = fmt(total * 2.5);
+    document.getElementById('r-p200').textContent = fmt(total * 3);
+
+    document.getElementById('r-profit100').textContent = fmt(total * 1.0);
+    document.getElementById('r-profit150').textContent = fmt(total * 1.5);
+    document.getElementById('r-profit200').textContent = fmt(total * 2.0);
+
+    saveTariffs();
+  }
+
+  ['weight', 'price', 'time', 'packaging', 's-print', 's-dry', 's-currency'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', calc);
+  });
+  document.getElementById('defect').addEventListener('change', calc);
+  calc();
+
+  // ---------- Service Worker (офлайн-кэш, работает при https/localhost, напр. GitHub Pages) ----------
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
